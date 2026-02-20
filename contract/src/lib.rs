@@ -108,4 +108,112 @@ impl SoroTaskContract {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    use soroban_sdk::testutils::{Address as _, Events};
+    use soroban_sdk::{vec, Env, FromVal, IntoVal};
+
+    #[test]
+    fn test_register_and_get() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroTaskContract);
+        let client = SoroTaskContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let target = Address::generate(&env);
+
+        let config = TaskConfig {
+            creator: creator.clone(),
+            target: target.clone(),
+            function: Symbol::new(&env, "hello"),
+            args: vec![&env, 0i128.into_val(&env)],
+            resolver: None,
+            interval: 3600,
+            last_run: 0,
+            gas_balance: 1000,
+        };
+
+        let task_id = client.register(&config);
+        assert_eq!(task_id, 1);
+
+        let retrieved_config = client.get_task(&task_id).unwrap();
+        assert_eq!(retrieved_config.creator, config.creator);
+        assert_eq!(retrieved_config.target, config.target);
+        assert_eq!(retrieved_config.function, config.function);
+        assert_eq!(retrieved_config.interval, config.interval);
+        assert_eq!(retrieved_config.gas_balance, config.gas_balance);
+
+        // Check event
+        let events = env.events().all();
+        let last_event = events.last().unwrap();
+        
+        assert_eq!(last_event.0, contract_id);
+        
+        let topics = last_event.1.clone();
+        assert_eq!(Symbol::from_val(&env, &topics.get(0).unwrap()), Symbol::new(&env, "TaskRegistered"));
+        assert_eq!(u64::from_val(&env, &topics.get(1).unwrap()), 1u64);
+        
+        let data: Address = last_event.2.clone().into_val(&env);
+        assert_eq!(data, creator);
+    }
+
+    #[test]
+    fn test_sequential_ids() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroTaskContract);
+        let client = SoroTaskContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let target = Address::generate(&env);
+
+        let config = TaskConfig {
+            creator: creator.clone(),
+            target: target.clone(),
+            function: Symbol::new(&env, "hello"),
+            args: vec![&env],
+            resolver: None,
+            interval: 3600,
+            last_run: 0,
+            gas_balance: 1000,
+        };
+
+        let id1 = client.register(&config);
+        let id2 = client.register(&config);
+        
+        assert_eq!(id1, 1);
+        assert_eq!(id2, 2);
+    }
+
+    #[test]
+    fn test_register_invalid_interval() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroTaskContract);
+        let client = SoroTaskContractClient::new(&env, &contract_id);
+
+        let creator = Address::generate(&env);
+        let target = Address::generate(&env);
+
+        let config = TaskConfig {
+            creator: creator.clone(),
+            target: target.clone(),
+            function: Symbol::new(&env, "hello"),
+            args: vec![&env],
+            resolver: None,
+            interval: 0, // Invalid
+            last_run: 0,
+            gas_balance: 1000,
+        };
+
+        let result = client.try_register(&config);
+        assert_eq!(result, Err(Ok(soroban_sdk::Error::from_contract_error(1))));
+    }
+}
+
 
