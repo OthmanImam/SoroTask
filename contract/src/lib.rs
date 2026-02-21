@@ -163,8 +163,9 @@ impl SoroTaskContract {
 mod tests {
     use super::*;
     use soroban_sdk::{
+        contract, contractimpl,
         testutils::{Address as _, Events, Ledger as _},
-        contract, contractimpl, vec, Env, FromVal, IntoVal,
+        vec, Env, FromVal, IntoVal,
     };
 
     // ── Mock Contracts ───────────────────────────────────────────────────────
