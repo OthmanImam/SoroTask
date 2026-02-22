@@ -26,7 +26,7 @@ async function main() {
     console.log(`Keeper Account: ${keeper.publicKey()}`);
 
     // Polling loop
-    setInterval(async () => {
+    const pollingInterval = setInterval(async () => {
         console.log("Checking for due tasks...");
         // TODO: Query contract for tasks due for execution
     }, config.pollingIntervalMs);
