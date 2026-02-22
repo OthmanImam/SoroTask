@@ -192,10 +192,8 @@ impl SoroTaskContract {
         env.storage().persistent().set(&task_key, &config);
 
         // Emit event
-        env.events().publish(
-            (Symbol::new(&env, "GasDeposited"), task_id),
-            (from, amount),
-        );
+        env.events()
+            .publish((Symbol::new(&env, "GasDeposited"), task_id), (from, amount));
     }
 
     /// Withdraws gas tokens from a task's balance.
